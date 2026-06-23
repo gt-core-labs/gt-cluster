@@ -24,3 +24,5 @@ gt-core-wt-quota/
 # ── noise ─────────────────────────────────────────────────────────────────
 image.png
 plans/
+.claude
+.vscode/
