@@ -1,0 +1,15 @@
+# Talos fuerza PodSecurity baseline cluster-wide. Estos namespaces necesitan
+# 'privileged': local-path helper pods usan hostPath; traefik usa hostPort 80/443.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: local-path-storage
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: traefik
+  labels:
+    pod-security.kubernetes.io/enforce: privileged

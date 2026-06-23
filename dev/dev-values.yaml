@@ -1,0 +1,52 @@
+# Dev overlay: imagenes -> registry TLS del cluster, single-node sizing.
+mcpServer:
+  image: { repository: registry.codecsrayo.com/gt-core-mcp-server, tag: dev, pullPolicy: Always }
+  api: { replicas: 1 }
+daemons:
+  image: { repository: registry.codecsrayo.com/gt-core-orchd, tag: dev, pullPolicy: Always }
+  # poolSize alto = el sistema se autoregula por host_cap_from_metrics (cores + RAM).
+  # host_cap = min(cores, avail_ram / polecatMemMb). polecatMemMb controla cuántos caben.
+  poolSize: 99
+  polecatMemMb: 512
+  ciGatedMerge: true
+web:
+  image: { repository: registry.codecsrayo.com/gt-web, tag: dev, pullPolicy: Always }
+  replicas: 1
+docs:
+  image: { repository: registry.codecsrayo.com/gt-docs, tag: dev, pullPolicy: Always }
+  replicas: 1
+storageClass: local-path
+eventlog: { accessMode: ReadWriteOnce }
+graph: { accessMode: ReadWriteOnce }
+# A2A ingress (gtcore-9039b5): POST /a2a + agent card publica en gt-dev.
+# Beads minteados cuelgan del epic buzon gtcore-51db53 ("A2A intake").
+# Auto-dispatch (Fase 2 — A1): orchd polls frontier and dispatches beads.
+autoDispatch:
+  enabled: true
+  maxInFlight: 99
+  tickSecs: 30
+a2a:
+  enabled: true
+  defaultRig: gtcore
+  intakeEpic: gtcore-51db53
+# App reachable via Traefik TLS (ACME netlify) en un host de DEV (NO toca el
+# A record de gt.codecsrayo.com = prod). tls.enabled=false: el cert lo emite
+# Traefik por anotacion certresolver, no un secret pre-hecho.
+domain: gt-dev.codecsrayo.com
+ingress:
+  enabled: true
+  className: traefik
+  tls:
+    enabled: false
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls.certresolver: netlify
+# Pull del registry TLS con auth: kubelet usa este secret (no depende del
+# containerd reload del nodo). Secret 'regcred' creado por namespace.
+imagePullSecrets:
+  - name: regcred
+
+# Email real (epic hq-9c199d): Resend. Secretos en gt-app-proxy/values-secret.yaml.
+email:
+  enabled: true
+  from: "gt-dev@codecsrayo.com"

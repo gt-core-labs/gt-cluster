@@ -1,0 +1,3 @@
+machine:
+  extensions:
+    - image: ghcr.io/siderolabs/tailscale:1.90.2

@@ -1,0 +1,41 @@
+# PROD overlay: gt.codecsrayo.com, imagenes :prod, single-node.
+domain: gt.codecsrayo.com
+mcpServer:
+  image: { repository: codecsrayo/gt-core-mcp-server, tag: sha-embeddings-ea298d7, pullPolicy: IfNotPresent }
+  api: { replicas: 1 }
+daemons:
+  image: { repository: codecsrayo/gt-core-mcp-server, tag: sha-embeddings-ea298d7, pullPolicy: IfNotPresent }
+web:
+  image: { repository: registry.codecsrayo.com/gt-web, tag: prod, pullPolicy: IfNotPresent }
+  replicas: 1
+docs:
+  image: { repository: registry.codecsrayo.com/gt-docs, tag: prod, pullPolicy: IfNotPresent }
+  replicas: 1
+storageClass: local-path
+eventlog: { accessMode: ReadWriteOnce }
+graph: { accessMode: ReadWriteOnce }
+imagePullSecrets:
+  - name: regcred
+ingress:
+  enabled: true
+  className: traefik
+  tls:
+    enabled: false
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls.certresolver: netlify
+
+# Email real (epic hq-9c199d): Resend. Secretos en gt-app-proxy/values-secret-prod.yaml.
+email:
+  enabled: true
+  from: "gt@codecsrayo.com"
+
+# Deploy-reconciler (gtproxy-50c890): prod-orchd corre el bin gt-orch-server
+# desde la imagen EMBEDDINGS (no gt-core-orchd), así que el target orchd apunta
+# a la imagen mcp-server. mcpServer hereda el default (gt-core-mcp-server +
+# sha-embeddings-). Persiste el override que antes iba por --set.
+deployReconciler:
+  targets:
+    orchd:
+      image: codecsrayo/gt-core-mcp-server
+      tagPrefix: "sha-embeddings-"

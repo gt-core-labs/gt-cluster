@@ -1,0 +1,26 @@
+# ── secrets — NEVER commit ────────────────────────────────────────────────
+.env
+*.env
+!.env.example
+.mcp-token
+.registry-creds
+.github-webhook-secret
+values-secret*.yaml
+!values-secret*.yaml.example
+*.pem
+*.key
+*_token
+# Talos rendered configs carry machine secrets/certs — regenerate from patches
+_out/
+# real (unsanitized) infra patches — only the .example is tracked
+patches/registry-auth.yaml
+patches/tailscale-extconfig.yaml
+# ── local clones / worktrees (their own repos) ────────────────────────────
+gt-core/
+gt-app-proxy/
+gt-web/
+gt-docs/
+gt-core-wt-quota/
+# ── noise ─────────────────────────────────────────────────────────────────
+image.png
+plans/

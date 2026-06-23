@@ -1,0 +1,6 @@
+machine:
+  registries:
+    mirrors:
+      192.168.1.160:30500:
+        endpoints:
+          - http://192.168.1.160:30500
