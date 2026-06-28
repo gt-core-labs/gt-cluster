@@ -1,0 +1,44 @@
+# etcd on a dedicated disk — DRAFT machineconfig patch (gtcore-a91840)
+# ---------------------------------------------------------------------------
+# WHY: etcd needs low-latency fsync with NO contention. On the single NVMe,
+# concurrent Rust builds from polecats saturated I/O and starved etcd hard
+# enough to block a reboot (incident 2026-06-28, epic gtcore-1915e7). A second
+# dedicated disk gives etcd <1ms fsync regardless of build load. The software
+# root cause is already mitigated (disk-aware orchd #151 + worktree GC #150 +
+# GT_POOL_SIZE=6); THIS is the definitive hardware isolation.
+#
+# STATUS: .example — NOT applied. The device path below is a PLACEHOLDER. etcd
+# IS the cluster state, so this is a maintenance-window operation, not a hot
+# patch. Fill in the real device, then follow the runbook before applying.
+#
+# RUNBOOK (single control-plane node 192.168.1.160, Talos v1.13.4):
+#   0. Confirm the new disk's device path (it is NOT machine.install.disk):
+#        talosctl -n 192.168.1.160 get disks
+#      Pick the new disk's id (e.g. /dev/sdb or /dev/nvme1n1) and set `device:` below.
+#   1. BACKUP — etcd is the entire cluster state:
+#        talosctl -e 192.168.1.160 -n 192.168.1.160 etcd snapshot _out/etcd-pre-disk.snapshot
+#   2. Layer this patch onto the node config and apply it (mounts the EMPTY new
+#      disk at /var/lib/etcd; etcd will start with no data):
+#        talosctl machineconfig patch _out/controlplane.yaml \
+#          --patch @patches/etcd-dedicated-disk.yaml -o _out/controlplane.yaml
+#        talosctl -n 192.168.1.160 apply-config --file _out/controlplane.yaml
+#   3. RESTORE the snapshot onto the new mount (confirm exact v1.13.4 flags first):
+#        talosctl -n 192.168.1.160 etcd snapshot recovery _out/etcd-pre-disk.snapshot   # verify cmd/flags for v1.13.4
+#      then wait for a healthy leader:
+#        talosctl -n 192.168.1.160 etcd status
+#        talosctl -n 192.168.1.160 health --server=false
+#   ROLLBACK: re-apply the node config WITHOUT this patch, then restore the same
+#             snapshot (etcd returns to the original /var/lib/etcd on the install disk).
+#   POST: check NVMe SMART — the original disk hung hard enough to block a reboot,
+#         which may indicate a disk-health problem, not just contention:
+#         talosctl -n 192.168.1.160 dmesg | grep -i nvme
+#
+# NOTE: `machine.disks` with mountpoint /var/lib/etcd is the stable, documented
+# approach. v1.13.4 may also expose VolumeConfig/UserVolumeConfig documents —
+# confirm against the matching Talos docs before applying either way.
+---
+machine:
+  disks:
+    - device: /dev/REPLACE_ME          # ← the NEW dedicated disk; CONFIRM via `talosctl get disks`
+      partitions:
+        - mountpoint: /var/lib/etcd     # relocate etcd's data dir to the dedicated disk
