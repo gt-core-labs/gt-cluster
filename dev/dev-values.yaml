@@ -4,9 +4,13 @@ mcpServer:
   api: { replicas: 1 }
 daemons:
   image: { repository: registry.codecsrayo.com/gt-core-orchd, tag: dev, pullPolicy: Always }
-  # poolSize alto = el sistema se autoregula por host_cap_from_metrics (cores + RAM).
-  # host_cap = min(cores, avail_ram / polecatMemMb). polecatMemMb controla cuántos caben.
-  poolSize: 99
+  # poolSize ACOTADO (incidente 2026-06-27/28, epic aislar-IO-etcd gtcore-1915e7).
+  # host_cap_from_metrics ahora es disk-aware (gtcore-c233c4): frena nuevos slings cuando la
+  # presion de I/O sube. PERO eso protege el I/O, NO el ESPACIO: cada build Rust deja un worktree
+  # de ~30-47GB, y poolSize:99 -> host_cap~24 -> 24 builds concurrentes LLENARIAN el NVMe unico
+  # antes de que terminen. El espacio lo cuidan el GC de worktrees (gtcore-acacfb) + un pool acotado.
+  # 6 ~= 240GB pico (~57% disco) con margen. Subir solo con disco dedicado a etcd (track B).
+  poolSize: 6
   polecatMemMb: 512
   ciGatedMerge: true
 web:
